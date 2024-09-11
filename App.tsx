@@ -1,13 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, SafeAreaView, BackHandler, Platform } from 'react-native';
+import { StyleSheet, View, Image, Text, TouchableOpacity, SafeAreaView, BackHandler, Platform, Linking, Alert } from 'react-native';
 import { WebView } from 'react-native-webview';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { requestTrackingPermissionsAsync, PermissionStatus } from 'expo-tracking-transparency';
+
+const allowedUrls = ['https://coffeedive.ro', 'https://www.coffeedive.ro']; 
 
 export default function App() {
   const [error, setError] = useState(false);
   const [scrollOffset, setScrollOffset] = useState(0);
   const [isScrollingDown, setIsScrollingDown] = useState(false);
-  const webViewRef = useRef<WebView>(null);
+  const [trackingPermission, setTrackingPermission] = useState<PermissionStatus | null>(null);
+  const webViewRef = useRef<WebView>(null);  
+  const [userResponse, setUserResponse] = useState<String | null>(null);
+  const [isPermissionChecked, setIsPermissionChecked] = useState(false); 
+  const [currentUrl, setCurrentUrl] = useState('https://coffeedive.ro/'); 
+
 
   const reloadPage = () => {
     setError(false);
@@ -21,7 +29,41 @@ export default function App() {
     return false;
   };
 
+  const checkTrackingPermission = async () => {
+    const { status } = await requestTrackingPermissionsAsync();
+    setTrackingPermission(status); 
+    setIsPermissionChecked(true); 
+
+    if (status === 'granted') {
+      setUserResponse('granted');
+    } else {
+      setUserResponse('deny');
+    }
+  };
+  
   useEffect(() => {
+
+    checkTrackingPermission(); 
+
+    const handleUrl = (event: LinkingEvent) => {
+      const { url } = event;
+      if (url && allowedUrls.some(allowedUrl => url.startsWith(allowedUrl))) {
+        setCurrentUrl(url);
+      } else {
+        Alert.alert('Invalid URL', 'This URL is not allowed.');
+      }
+    };
+
+    const getInitialURL = async () => {
+      const initialUrl = await Linking.getInitialURL();
+      if (initialUrl && allowedUrls.some(allowedUrl => initialUrl.startsWith(allowedUrl))) {
+        setCurrentUrl(initialUrl);
+      }
+    };
+    getInitialURL();
+
+    const subscription = Linking.addEventListener('url', handleUrl);
+
     if (Platform.OS === 'android') {
       BackHandler.addEventListener('hardwareBackPress', handleBackButton);
       return () => BackHandler.removeEventListener('hardwareBackPress', handleBackButton);
@@ -33,10 +75,16 @@ export default function App() {
       webViewRef.current.goBack();
     }
   };
+  
 
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safeAreaTop} />
+      {!isPermissionChecked ? (
+        <View style={styles.imageContainer}>
+          <Image source={require('./assets/coffeedive-icon.png')} style={styles.placeholderImage} />
+        </View>
+      ) : (
       <View style={styles.webViewContainer}>
         {error ? (
           <View style={styles.errorContainer}>
@@ -49,8 +97,9 @@ export default function App() {
           <WebView
             ref={webViewRef}
             style={styles.webView}
-            source={{ uri: 'https://coffeedive.ro/' }}
+            source={{ uri: currentUrl }}
             onError={() => setError(true)}
+            javaScriptEnabled={true}
             onScroll={(event) => {
               const offsetY = event.nativeEvent.contentOffset.y;
               setIsScrollingDown(offsetY > scrollOffset);
@@ -59,6 +108,7 @@ export default function App() {
           />
         )}
       </View>
+      )}
       {Platform.OS === 'ios' && (
         <TouchableOpacity
           style={[styles.backButton, { opacity: isScrollingDown && scrollOffset > 0 ? 1 : 0 }]}
@@ -114,4 +164,18 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 5,
   },
+  imageContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  placeholderImage: {
+    width: 200,
+    height: 200,
+    resizeMode: 'contain',
+  },
 });
+
+interface LinkingEvent {
+  url: string;
+}

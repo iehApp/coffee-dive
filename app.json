@@ -2,7 +2,7 @@
   "expo": {
     "name": "coffe-Dive",
     "slug": "coffee-Dive",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/coffeedive-icon.png",
     "userInterfaceStyle": "light",
@@ -14,21 +14,40 @@
     "assetBundlePatterns": [
       "**/*"
     ],
+    "scheme": "coffeedive",
+    "host": "www.coffeedive.ro",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "y"
+      "bundleIdentifier": "com.iehapp.coffeeDive",
+      "associatedDomains": ["applinks:www.coffeedive.ro"]
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/coffeedive-icon.png",
         "backgroundColor": "#c6bba8"
       },
-      "package": "com.iehapp.coffeeDive"
+      "package": "com.iehapp.coffeeDive",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "www.coffeedive.ro"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "extra": {
       "eas": {
         "projectId": "59c28472-bfd3-4dd8-ac9a-6f9c2ed40e92"
       }
-    }
+    },
+    "plugins": [
+      "expo-tracking-transparency"
+    ]
   }
 }
